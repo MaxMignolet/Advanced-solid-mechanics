@@ -142,6 +142,14 @@ material1.put(ELASTIC_MODULUS, Young)
 material1.put(POISSON_RATIO,   Nu)   
 material1.put(YIELD_NUM,1)  #Number of the hardening law used
 
+material5 = materset.define(5, EvpMixtHHypoMaterial) #Create material number 5 as Elasto-viscoplastic with Mixed hardening
+material5.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
+material5.put(ELASTIC_MODULUS, Young)     
+material5.put(POISSON_RATIO,   Nu)   
+material5.put(YIELD_NUM,1)  #Number of the isotropic linear hardening law used
+material5.put(KH_NB,5) #Total number (quantity) of kinetic hardening laws used
+material5.put(KH_NUM1,6)
+
 SigmaY_0=200.0              #Elastic limit of virgin material  
 h = 30000.0                 #Hardening parameter 
 theta_star = 0.2            #Mixed hardening parameter
@@ -153,13 +161,14 @@ lawset = domain.getMaterialLawSet()
 # Reference pages in the doc:
 #   http://metafor.ltas.ulg.ac.be/dokuwiki/doc/user/elements/volumes/isohard
 #   http://metafor.ltas.ulg.ac.be/dokuwiki/doc/user/elements/volumes/kinehard
+#   http://metafor.ltas.ulg.ac.be/dokuwiki/doc/user/elements/volumes/yield_stress
 
 # Linear isotropic hardening
 lawset1 = lawset.define(1, LinearIsotropicHardening)  #Create law number 1 as Linear Isotropic hardening law 
 lawset1.put(IH_SIGEL,   SigmaY_0) #Set law parameters (see required parameters in the documentation)
 lawset1.put(IH_H,       h)
 
-# Non-linear isotrtopic hardening
+# Non-linear isotropic hardening
 lawset2 = lawset.define(2, SaturatedIsotropicHardening)
 lawset2.put(IH_SIGEL, SigmaY_0)
 lawset2.put(IH_Q, SigmaY_inf - SigmaY_0)
@@ -174,8 +183,19 @@ lawset4 = lawset.define(4, ArmstrongFrederickKinematicHardening)
 lawset4.put(KH_H, h)
 lawset4.put(KH_B, eta_k)
 
+# Mixed linear isotropic hardening
+lawset5 = lawset.define(5, LinearIsotropicHardening) 
+lawset5.put(IH_SIGEL,   SigmaY_0) 
+lawset5.put(IH_H, theta_star * h)
+
+# Mixed linear kinematic hardening
+lawset6 = lawset.define(6, DruckerPragerKinematicHardening)
+lawset6.put(KH_H, (1-theta_star) * h))
+
 # Viscoplastic law ¡TODO!
-# lawset5 = lawset.define(5, ?)
+# lawset7 = lawset.define(7, PerzynaYieldStress ??) Time integration to do?
+# lawset7.put(PERZYNA_N, 0)
+#
 
 ############################################################
 # END OF DEFINITION OF THE MATERIALS AND MATERIAL LAWS     #
