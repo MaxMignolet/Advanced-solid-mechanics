@@ -136,13 +136,34 @@ Young = 20.5E4                    #Young's Modulus
 Nu = 0.3                          #Poisson ratio   
     
 materset = domain.getMaterialSet()                              
-material1 = materset.define (1, EvpIsoHHypoMaterial) #Create material number 1 as Elasto-viscoplastic with Isotropic hardening 
+material1 = materset.define (1, EvpIsoHHypoMaterial) #Create material number 1 as Elasto-viscoplastic with Isotropic linear hardening 
 material1.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
 material1.put(ELASTIC_MODULUS, Young)     
 material1.put(POISSON_RATIO,   Nu)   
 material1.put(YIELD_NUM,1)  #Number of the hardening law used
 
-material5 = materset.define(5, EvpMixtHHypoMaterial) #Create material number 5 as Elasto-viscoplastic with Mixed hardening
+material1 = materset.define (2, EvpIsoHHypoMaterial) #Create material number 2 as Elasto-viscoplastic with Isotropic non-linear hardening 
+material1.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
+material1.put(ELASTIC_MODULUS, Young)     
+material1.put(POISSON_RATIO,   Nu)   
+material1.put(YIELD_NUM,2)  #Number of the hardening law used
+
+# /!\ A verifier si on peut utiliser EvpIsoHypoMaterial ou s'il faut utiliser un autre
+material1 = materset.define (3, EvpIsoHHypoMaterial) #Create material number 3 as Elasto-viscoplastic with Kinematic linear hardening 
+material1.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
+material1.put(ELASTIC_MODULUS, Young)     
+material1.put(POISSON_RATIO,   Nu)   
+material1.put(YIELD_NUM,3)  #Number of the hardening law used
+
+# /!\ A verifier si on peut utiliser EvpIsoHypoMaterial ou s'il faut utiliser un autre
+material1 = materset.define (4, EvpIsoHHypoMaterial) #Create material number 4 as Elasto-viscoplastic with Kinematic non-linear hardening 
+material1.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
+material1.put(ELASTIC_MODULUS, Young)     
+material1.put(POISSON_RATIO,   Nu)   
+material1.put(YIELD_NUM,4)  #Number of the hardening law used
+
+# /!\ A verifier parce qu'il est marqué "non-linear" mixed hardening dans la documentation
+material5 = materset.define(5, EvpMixtHHypoMaterial) #Create material number 5 as Elasto-viscoplastic with ?NON-LINEAR? Mixed hardening
 material5.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
 material5.put(ELASTIC_MODULUS, Young)     
 material5.put(POISSON_RATIO,   Nu)   
@@ -172,7 +193,7 @@ lawset1.put(IH_H,       h)
 lawset2 = lawset.define(2, SaturatedIsotropicHardening)
 lawset2.put(IH_SIGEL, SigmaY_0)
 lawset2.put(IH_Q, SigmaY_inf - SigmaY_0)
-lawset2.put(IH_KSI, h)
+lawset2.put(IH_KSI, h/(SigmaY_inf - SigmaY_0))
 
 # Linear kinematic hardening
 lawset3 = lawset.define(3, DruckerPragerKinematicHardening)
