@@ -130,53 +130,56 @@ TransfiniteMesher3D(volumeset(1)).execute(True)
 ############################################################
 # BEGIN OF DEFINITION OF THE MATERIALS AND MATERIAL LAWS   #
 ############################################################
+# no restrictions on the value taken by the three following variable, except
+# that IsoHardening and KinHardening cannot be both zero
+# example: 2, 1, 0 -> mixed non-linear isotropic, linear kinematic hardening
+# example: 1, 0, 1 -> linear isotropic viscoplastic hardening
+IsoHardening = 2 # indicates the isotropic hardening law used
+                 # if 1: linear
+                 # if 2: non-linear (saturated/Voce)
+                 # if 0: no isotropic hardening (simga_y = sigma_y^0)
+KinHardening = 2 # indicates the kinematic hardening law used
+                 # if 1: linear
+                 # if 2: non-linear
+                 # if 0: no kinematic hardening (backstress = 0)
+Visco = 1        # indicates the visoplastic law used #still to be implemented
+                 # if 1: Perzyna law
+                 # if 0: no viscosity effects
+Kin_base = 2 # don't modify this!
+
 #MATERIAL:   
-Density = 7.85E-9                 #Density
-Young = 20.5E4                    #Young's Modulus
-Nu = 0.3                          #Poisson ratio   
-    
-materset = domain.getMaterialSet()                              
-material1 = materset.define (1, EvpIsoHHypoMaterial) #Create material number 1 as Elasto-viscoplastic with Isotropic linear hardening 
+Density = 7.85E-9           # Density
+Young = 20.5E4              # Young's Modulus
+Nu = 0.3                    # Poisson ratio   
+SigmaY_0=200.0              # Elastic limit of virgin material  
+h = 30000.0                 # Hardening parameter 
+theta_star = 0.2            # Mixed hardening parameter
+SigmaY_inf = 300            # Elastic limit at saturation
+eta_k = 0                   # Non-linear kinematic parameter
+eta = 0                     # Viscoplastic parameter
+
+if(IsoHardening != 0 and KinHardening != 0): # if mixed hardening
+    h_i = theta_star * h
+    h_k = (1 - theta_star) * h
+else: # if no mixed hardening (either iso. or kin.)
+    h_i = h # don't worry it's ok to set them both equal to h
+    h_k = h # only one of the two shall be used in the end
+
+materset = domain.getMaterialSet() 
+if(KinHardening == 0):
+    material1 = materset.define (1, EvpIsoHHypoMaterial) #Create material number 1 as Elasto-viscoplastic with Isotropic linear hardening 
+else:
+    material1 = materset.define (1, EvpMixtHHypoMaterial)
 material1.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
 material1.put(ELASTIC_MODULUS, Young)     
 material1.put(POISSON_RATIO,   Nu)   
-material1.put(YIELD_NUM,1)  #Number of the hardening law used
-
-material2 = materset.define (2, EvpIsoHHypoMaterial) #Create material number 2 as Elasto-viscoplastic with Isotropic non-linear hardening 
-material2.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
-material2.put(ELASTIC_MODULUS, Young)     
-material2.put(POISSON_RATIO,   Nu)   
-material2.put(YIELD_NUM,2)  #Number of the hardening law used
-
-# /!\ A verifier si on peut utiliser EvpIsoHypoMaterial ou s'il faut utiliser un autre
-material3 = materset.define (3, EvpIsoHHypoMaterial) #Create material number 3 as Elasto-viscoplastic with Kinematic linear hardening 
-material3.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
-material3.put(ELASTIC_MODULUS, Young)     
-material3.put(POISSON_RATIO,   Nu)   
-material3.put(YIELD_NUM,3)  #Number of the hardening law used
-
-# /!\ A verifier si on peut utiliser EvpIsoHypoMaterial ou s'il faut utiliser un autre
-material4 = materset.define (4, EvpIsoHHypoMaterial) #Create material number 4 as Elasto-viscoplastic with Kinematic non-linear hardening 
-material4.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
-material4.put(ELASTIC_MODULUS, Young)     
-material4.put(POISSON_RATIO,   Nu)   
-material4.put(YIELD_NUM,4)  #Number of the hardening law used
-
-# /!\ A verifier parce qu'il est marqué "non-linear" mixed hardening dans la documentation
-material5 = materset.define(5, EvpMixtHHypoMaterial) #Create material number 5 as Elasto-viscoplastic with ?NON-LINEAR? Mixed hardening
-material5.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
-material5.put(ELASTIC_MODULUS, Young)     
-material5.put(POISSON_RATIO,   Nu)   
-material5.put(YIELD_NUM,1)  #Number of the isotropic linear hardening law used
-material5.put(KH_NB,5) #Total number (quantity) of kinetic hardening laws used
-material5.put(KH_NUM1,6)
-
-SigmaY_0=200.0              #Elastic limit of virgin material  
-h = 30000.0                 #Hardening parameter 
-theta_star = 0.2            #Mixed hardening parameter
-SigmaY_inf = 300            #Elastic limit at saturation
-eta_k = 0                   #Non-linear kinematic parameter
-eta = 0                     #Viscoplastic parameter
+if(IsoHardening != 0 and Visco == 0):
+    material1.put(YIELD_NUM, IsoHardening)  #Number of the hardening law used
+if(KinHardening != 0):
+    material1.put(KH_NB, 1)
+    material1.put(KH_NUM1, KinHardening + Kin_base) # Number of the kinematic hardening law
+if(Visco != 0):
+    material1.put(YIELD_NUM, 5) # poof, a magic number appeared :p
 
 lawset = domain.getMaterialLawSet() 
 # Reference pages in the doc:
@@ -187,36 +190,31 @@ lawset = domain.getMaterialLawSet()
 # Linear isotropic hardening
 lawset1 = lawset.define(1, LinearIsotropicHardening)  #Create law number 1 as Linear Isotropic hardening law 
 lawset1.put(IH_SIGEL,   SigmaY_0) #Set law parameters (see required parameters in the documentation)
-lawset1.put(IH_H,       h)
+lawset1.put(IH_H,       h_i)
 
-# Non-linear isotropic hardening
+# Non-linear isotropic hardening (saturated law/Voce's law)
 lawset2 = lawset.define(2, SaturatedIsotropicHardening)
 lawset2.put(IH_SIGEL, SigmaY_0)
 lawset2.put(IH_Q, SigmaY_inf - SigmaY_0)
-lawset2.put(IH_KSI, h/(SigmaY_inf - SigmaY_0))
+lawset2.put(IH_KSI, h_i/(SigmaY_inf - SigmaY_0))
 
 # Linear kinematic hardening
 lawset3 = lawset.define(3, DruckerPragerKinematicHardening)
-lawset3.put(KH_H, h)
+lawset3.put(KH_H, h_k)
 
 # Non-linear kinematic hardening
 lawset4 = lawset.define(4, ArmstrongFrederickKinematicHardening)
-lawset4.put(KH_H, h)
+lawset4.put(KH_H, h_k)
 lawset4.put(KH_B, eta_k)
 
-# Mixed linear isotropic hardening
-lawset5 = lawset.define(5, LinearIsotropicHardening) 
-lawset5.put(IH_SIGEL,   SigmaY_0) 
-lawset5.put(IH_H, theta_star * h)
-
-# Mixed linear kinematic hardening
-lawset6 = lawset.define(6, DruckerPragerKinematicHardening)
-lawset6.put(KH_H, (1-theta_star) * h)
-
 # Viscoplastic law ¡TODO!
-# lawset7 = lawset.define(7, PerzynaYieldStress ??) Time integration to do?
-# lawset7.put(PERZYNA_N, 0)
-#
+lawset5 = lawset.define(5, PerzynaYieldStress)
+if(IsoHardening != 0):
+    lawset5.put(IH_NUM, IsoHardening)
+lawset5.put(PERZYNA_K, eta)
+lawset5.put(PERZYNA_M, 1)
+lawset5.put(PERZYNA_N, 0)
+
 
 ############################################################
 # END OF DEFINITION OF THE MATERIALS AND MATERIAL LAWS     #
@@ -267,7 +265,7 @@ elif p['GeometryHypothesis']=="PLANESTRAIN":
 #-------------------------------------------------
 
 #LOAD:                                                              
-Trac = 200.0*(1-Nu)/(1-2*Nu)                       #Traction
+Trac = 400.                       #Traction
 Ncycle = 5                         #Number of cycles of loading/unloading
 Tcycle = 4.                        #Duration of one cycle
 
