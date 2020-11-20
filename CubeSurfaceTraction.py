@@ -134,7 +134,9 @@ TransfiniteMesher3D(volumeset(1)).execute(True)
 # that IsoHardening and KinHardening cannot be both zero
 # example: 2, 1, 0 -> mixed non-linear isotropic, linear kinematic hardening
 # example: 1, 0, 1 -> linear isotropic viscoplastic hardening
-IsoHardening = 2 # indicates the isotropic hardening law used
+# /!\ pure kinematic hardening  doesn't work. A yield stress law for a constant
+# :!\ sigma_y have still to be implemented to resolve this issue
+IsoHardening = 0 # indicates the isotropic hardening law used
                  # if 1: linear
                  # if 2: non-linear (saturated/Voce)
                  # if 0: no isotropic hardening (simga_y = sigma_y^0)
@@ -161,9 +163,12 @@ eta = 0                     # Viscoplastic parameter
 if(IsoHardening != 0 and KinHardening != 0): # if mixed hardening
     h_i = theta_star * h
     h_k = (1 - theta_star) * h
-else: # if no mixed hardening (either iso. or kin.)
-    h_i = h # don't worry it's ok to set them both equal to h
-    h_k = h # only one of the two shall be used in the end
+elif(IsoHardening == 0): # if pure kinematic hardening
+    h_i = 0
+    h_k = h
+else: # if KinHardening == 0
+    h_i = h
+    h_k = 0
 
 materset = domain.getMaterialSet() 
 if(KinHardening == 0):
@@ -173,7 +178,7 @@ else:
 material1.put(MASS_DENSITY,    Density)   #Set Material parameters (see required parameters in the documentation)
 material1.put(ELASTIC_MODULUS, Young)     
 material1.put(POISSON_RATIO,   Nu)   
-if(IsoHardening != 0 and Visco == 0):
+if(Visco == 0):
     material1.put(YIELD_NUM, IsoHardening)  #Number of the hardening law used
 if(KinHardening != 0):
     material1.put(KH_NB, 1)
@@ -186,6 +191,11 @@ lawset = domain.getMaterialLawSet()
 #   http://metafor.ltas.ulg.ac.be/dokuwiki/doc/user/elements/volumes/isohard
 #   http://metafor.ltas.ulg.ac.be/dokuwiki/doc/user/elements/volumes/kinehard
 #   http://metafor.ltas.ulg.ac.be/dokuwiki/doc/user/elements/volumes/yield_stress
+
+# No isotropic hardening for pure kinematic hardening
+lawset0 = lawset.define(0, LinearIsotropicHardening)  #Create law number 1 as Linear Isotropic hardening law 
+lawset0.put(IH_SIGEL,   SigmaY_0) #Set law parameters (see required parameters in the documentation)
+lawset0.put(IH_H,       0)
 
 # Linear isotropic hardening
 lawset1 = lawset.define(1, LinearIsotropicHardening)  #Create law number 1 as Linear Isotropic hardening law 
@@ -209,8 +219,7 @@ lawset4.put(KH_B, eta_k)
 
 # Viscoplastic law ¡TODO!
 lawset5 = lawset.define(5, PerzynaYieldStress)
-if(IsoHardening != 0):
-    lawset5.put(IH_NUM, IsoHardening)
+lawset5.put(IH_NUM, IsoHardening)
 lawset5.put(PERZYNA_K, eta)
 lawset5.put(PERZYNA_M, 1)
 lawset5.put(PERZYNA_N, 0)
