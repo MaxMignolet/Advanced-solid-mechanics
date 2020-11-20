@@ -211,7 +211,7 @@ lawset5.put(IH_H, theta_star * h)
 
 # Mixed linear kinematic hardening
 lawset6 = lawset.define(6, DruckerPragerKinematicHardening)
-lawset6.put(KH_H, (1-theta_star) * h))
+lawset6.put(KH_H, (1-theta_star) * h)
 
 # Viscoplastic law ¡TODO!
 # lawset7 = lawset.define(7, PerzynaYieldStress ??) Time integration to do?
