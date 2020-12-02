@@ -4,7 +4,8 @@
 #                                               #
 #################################################.
 
-from wrap import *                        
+from wrap import *
+import math                        
 
 metafor = Metafor()
 domain = metafor.getDomain()
@@ -21,12 +22,12 @@ def getMetafor(p={}):
 
 #GEOMETRY:
 p= {} 
-p['GeometryHypothesis'] = "PLANESTRAIN" #PLANESTRESS or "PLANESTRAIN" ; you need to implement PLANESTRAIN yourself! 
+p['GeometryHypothesis'] = "PLANESTRESS" #PLANESTRESS or "PLANESTRAIN" ; you need to implement PLANESTRAIN yourself! 
 p['EdgeSize'] = 120                     #Length of the cube
 #MESH:    
-p['Nx'] = 1                             #Nb of elements in the x direction
-p['Ny'] = 1                             #Nb of elements in the y direction
-p['Nz'] = 1                             #Nb of elements in the z direction
+p['Nx'] = 2                             #Nb of elements in the x direction
+p['Ny'] = 2                             #Nb of elements in the y direction
+p['Nz'] = 2                             #Nb of elements in the z direction
 #TIME:
 p['dT'] = 0.1                           #Maximum time step                     
 
@@ -136,18 +137,20 @@ TransfiniteMesher3D(volumeset(1)).execute(True)
 # example: 1, 0, 1 -> linear isotropic viscoplastic hardening
 # /!\ pure kinematic hardening  doesn't work. A yield stress law for a constant
 # :!\ sigma_y have still to be implemented to resolve this issue
-IsoHardening = 1 # indicates the isotropic hardening law used
+IsoHardening = 0 # indicates the isotropic hardening law used
                  # if 1: linear
                  # if 2: non-linear (saturated/Voce)
                  # if 0: no isotropic hardening (simga_y = sigma_y^0)
-KinHardening = 0 # indicates the kinematic hardening law used
+KinHardening = 2 # indicates the kinematic hardening law used
                  # if 1: linear
                  # if 2: non-linear
                  # if 0: no kinematic hardening (backstress = 0)
-Visco = 0        # indicates the visoplastic law used #still to be implemented
+Visco = 0       # indicates the viscoplastic law used #still to be implemented
                  # if 1: Perzyna law
                  # if 0: no viscosity effects
 Kin_base = 2 # don't modify this!
+
+prescrDisp = 0   # Use prescribed displacement instead of load. Will cancel all loads.
 
 #MATERIAL:   
 Density = 7.85E-9           # Density
@@ -157,9 +160,8 @@ SigmaY_0=200.0              # Elastic limit of virgin material
 h = 30000.0                 # Hardening parameter 
 theta_star = 0.2            # Mixed hardening parameter
 SigmaY_inf = 300            # Elastic limit at saturation
-eta_k = 0                   # Non-linear kinematic parameter
-viscoRelaxationTime = 3.    # [s] = eta / h_i
-eta = h*viscoRelaxationTime # Viscoplastic parameter [MPa.s]
+eta_k = math.sqrt(2/3) * h/SigmaY_0 # Non-linear kinematic parameter
+eta = 0                     # Viscoplastic parameter
 
 if(IsoHardening != 0 and KinHardening != 0): # if mixed hardening
     h_i = theta_star * h
@@ -261,12 +263,16 @@ if p['GeometryHypothesis']=="PLANESTRESS":
 elif p['GeometryHypothesis']=="PLANESTRAIN":
     loadingset.define(sideset(1),Field1D(TZ,RE),0.)                     
     loadingset.define(sideset(2),Field1D(TZ,RE),0.) 
-    loadingset.define(sideset(3),Field1D(TY,RE),0.)                     
+    loadingset.define(sideset(3),Field1D(TY,RE),0.)                                         
+    loadingset.define(sideset(5),Field1D(TY,RE),0.)                     
     loadingset.define(sideset(6),Field1D(TX,RE),0.)
     ###################################################################
     # IMPLEMENT BOUNDARY CONDITION TO OBTAIN PLANE STRAIN STATE HERE  #
     ###################################################################
     # => what I've done *should* be ok
+    
+# Maximum prescribed displacement
+
     
 #7. LOADS
 #=============
@@ -277,53 +283,24 @@ elif p['GeometryHypothesis']=="PLANESTRAIN":
 Trac = 305.                       #Traction
 Ncycle = 5                         #Number of cycles of loading/unloading
 Tcycle = 4.                        #Duration of one cycle
-RelaxFractionTime = .25            # Fraction of Tcycle, constant imposed loading
+
+uMax = 0.5                       #Max prescribed displacement 
+
 fct = PieceWiseLinearFunction()
-whichFunction = "visco1"
-# whichFunction = "reverse"
-# whichFunction = "visco1"
-# whichFunction = "visco2"
-if whichFunction == "normal":
-    for i in range (0,Ncycle):
-        fct.setData(i*Tcycle+0.,0.) #POINT n°1
-        fct.setData(i*Tcycle+Tcycle/4.0,1.0)#POINT n°2
-        fct.setData(i*Tcycle+Tcycle*2.0/4.0,0.0)#POINT n°3
-        fct.setData(i*Tcycle+Tcycle*3.0/4.0,-1.0)#POINT n°4
-        fct.setData(i*Tcycle+Tcycle*4.0/4.0,0.0)#POINT n°5    
-elif whichFunction == "reverse": # t = -t(t)
-    for i in range (0,Ncycle):
-        fct.setData(i*Tcycle+0.,0.) #POINT n°1
-        fct.setData(i*Tcycle+Tcycle/4.0,-1.0)#POINT n°2
-        fct.setData(i*Tcycle+Tcycle*2.0/4.0,0.0)#POINT n°3
-        fct.setData(i*Tcycle+Tcycle*3.0/4.0,1.0)#POINT n°4
-        fct.setData(i*Tcycle+Tcycle*4.0/4.0,0.0)#POINT n°5    
-elif whichFunction == "visco1": # kept at a non-zero value after one cycle
-        staticLoadFraction = 1 # = staticLoad / Trac
-        fct.setData(0.,0.) #POINT n°1
-        fct.setData(Tcycle/4.0,1.0)#POINT n°2
-        fct.setData(Tcycle*2.0/4.0,0.0)#POINT n°3
-        fct.setData(Tcycle*3.0/4.0,-1.0)#POINT n°4
-        fct.setData(Tcycle*4.0/4.0,0.0)#POINT n°5    
-        fct.setData(Tcycle*6.0/4.0,staticLoadFraction)#POINT n°6    
-        fct.setData(Tcycle*10.0,staticLoadFraction)#POINT n°7    
-elif whichFunction == "visco2":
-    # smoothen sawtooth: /¯\_   _
-    #                        \_/
-    for i in range (0,Ncycle):
-        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+0.,0.) #POINT n°1
-        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle/4.,1.) #POINT n°2
-        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(1./4.+RelaxFractionTime),1.) #POINT n°3
-        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(2./4.+RelaxFractionTime),0.) #POINT n°4
-        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(2./4.+2*RelaxFractionTime),0.) #POINT n°5
-        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(3./4.+2*RelaxFractionTime),-1.) #POINT n°6
-        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(3./4.+3*RelaxFractionTime),-1.) #POINT n°7
-        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(1+3*RelaxFractionTime),0.) #POINT n°8
-        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(1+4*RelaxFractionTime),0.) #POINT n°9
+for i in range (0,Ncycle):
+    fct.setData(i*Tcycle+0.,0.) #POINT n°1
+    fct.setData(i*Tcycle+Tcycle/4.0,1.0)#POINT n°2
+    fct.setData(i*Tcycle+Tcycle*2.0/4.0,0.0)#POINT n°3
+    fct.setData(i*Tcycle+Tcycle*3.0/4.0,-1.0)#POINT n°4
+    fct.setData(i*Tcycle+Tcycle*4.0/4.0,0.0)#POINT n°5    
 
 #########################################
 # IMPLEMENT A DIFFERENT LOADING FCT HERE#
 #########################################
-
+if prescrDisp == 1:
+    Trac = 0.
+    loadingset.define(sideset(4), Field1D(TX,RE), uMax, fct, INCREMENTAL_LOAD)
+    
 prp2 = ElementProperties (Traction3DElement)                    
 prp2.put(PRESSURE,  Trac)                             
 prp2.depend (PRESSURE, fct, Field1D(TM,RE)) # To apply your new function, you can put it instead of "fct" here
@@ -360,9 +337,6 @@ valuesmanager.add(4, IFNodalValueExtractor(pointset(node_id), IF_SIG_ZZ),'Sigma_
 valuesmanager.add(5, IFNodalValueExtractor(pointset(node_id), IF_EVMS),'SigmaVM' )
 valuesmanager.add(6, IFNodalValueExtractor(pointset(node_id), IF_YIELD_STRESS),'Sigma_Yield' )
 
-valuesmanager.add(15, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_XY' )
-valuesmanager.add(16, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_XZ' )
-valuesmanager.add(17, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_YZ' )
 #Strain
 valuesmanager.add(7, IFNodalValueExtractor(pointset(node_id), IF_EPL),'EPL' )
 valuesmanager.add(8, IFNodalValueExtractor(pointset(node_id), IF_NAT_STRAIN_XX),'E_XX' )
@@ -387,21 +361,12 @@ dataCurveSZ = VectorDataCurve(3, valuesmanager.getDataVector(1), valuesmanager.g
 dataCurveSVM = VectorDataCurve(4, valuesmanager.getDataVector(1), valuesmanager.getDataVector(5),'Sigma_VM')
 dataCurveSYield = VectorDataCurve(5, valuesmanager.getDataVector(1), valuesmanager.getDataVector(6),'Sigma_Yield')
 
-dataCurveSXY = VectorDataCurve(13, valuesmanager.getDataVector(1), valuesmanager.getDataVector(15),'Sigma_XY')
-dataCurveSXZ = VectorDataCurve(14, valuesmanager.getDataVector(1), valuesmanager.getDataVector(16),'Sigma_XZ')
-dataCurveSYZ = VectorDataCurve(15, valuesmanager.getDataVector(1), valuesmanager.getDataVector(17),'Sigma_YZ')
-
 dataCurveSet2 = DataCurveSet()
 dataCurveSet2.add(dataCurveSX)
 dataCurveSet2.add(dataCurveSY)
 dataCurveSet2.add(dataCurveSZ)
 dataCurveSet2.add(dataCurveSVM)
 dataCurveSet2.add(dataCurveSYield)
-
-# dataCurveSet2.add(dataCurveSXY)
-# dataCurveSet2.add(dataCurveSXZ)
-# dataCurveSet2.add(dataCurveSYZ)
-
 winc2 = VizWin()
 winc2.add(dataCurveSet2)
 metafor.addObserver(winc2)
@@ -434,11 +399,5 @@ dataCurveSet4.add(dataCurveAZ)
 winc4 = VizWin()
 winc4.add(dataCurveSet4)
 metafor.addObserver(winc4)
+metafor.addObserver(winc4)
 
-# Hydropressure
-dataCurveP = VectorDataCurve(13, valuesmanager.getDataVector(1), valuesmanager.getDataVector(14),'IF_P')
-dataCurveSet5 = DataCurveSet()
-dataCurveSet5.add(dataCurveP)
-winc5 = VizWin()
-winc5.add(dataCurveSet5)
-metafor.addObserver(winc5)
