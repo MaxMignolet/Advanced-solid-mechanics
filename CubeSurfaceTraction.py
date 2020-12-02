@@ -161,7 +161,8 @@ h = 30000.0                 # Hardening parameter
 theta_star = 0.2            # Mixed hardening parameter
 SigmaY_inf = 300            # Elastic limit at saturation
 eta_k = math.sqrt(2/3) * h/SigmaY_0 # Non-linear kinematic parameter
-eta = 0                     # Viscoplastic parameter
+viscoRelaxationTime = 3.    # [s] = eta / h_i
+eta = h*viscoRelaxationTime # Viscoplastic parameter [MPa.s]
 
 if(IsoHardening != 0 and KinHardening != 0): # if mixed hardening
     h_i = theta_star * h
@@ -263,15 +264,13 @@ if p['GeometryHypothesis']=="PLANESTRESS":
 elif p['GeometryHypothesis']=="PLANESTRAIN":
     loadingset.define(sideset(1),Field1D(TZ,RE),0.)                     
     loadingset.define(sideset(2),Field1D(TZ,RE),0.) 
-    loadingset.define(sideset(3),Field1D(TY,RE),0.)                                         
-    loadingset.define(sideset(5),Field1D(TY,RE),0.)                     
+    loadingset.define(sideset(3),Field1D(TY,RE),0.)                     
     loadingset.define(sideset(6),Field1D(TX,RE),0.)
     ###################################################################
     # IMPLEMENT BOUNDARY CONDITION TO OBTAIN PLANE STRAIN STATE HERE  #
     ###################################################################
     # => what I've done *should* be ok
     
-# Maximum prescribed displacement
 
     
 #7. LOADS
@@ -287,12 +286,46 @@ Tcycle = 4.                        #Duration of one cycle
 uMax = 0.5                       #Max prescribed displacement 
 
 fct = PieceWiseLinearFunction()
-for i in range (0,Ncycle):
-    fct.setData(i*Tcycle+0.,0.) #POINT n°1
-    fct.setData(i*Tcycle+Tcycle/4.0,1.0)#POINT n°2
-    fct.setData(i*Tcycle+Tcycle*2.0/4.0,0.0)#POINT n°3
-    fct.setData(i*Tcycle+Tcycle*3.0/4.0,-1.0)#POINT n°4
-    fct.setData(i*Tcycle+Tcycle*4.0/4.0,0.0)#POINT n°5    
+whichFunction = "normal"
+# whichFunction = "reverse"
+# whichFunction = "visco1"
+# whichFunction = "visco2"
+if whichFunction == "normal":
+    for i in range (0,Ncycle):
+        fct.setData(i*Tcycle+0.,0.) #POINT n°1
+        fct.setData(i*Tcycle+Tcycle/4.0,1.0)#POINT n°2
+        fct.setData(i*Tcycle+Tcycle*2.0/4.0,0.0)#POINT n°3
+        fct.setData(i*Tcycle+Tcycle*3.0/4.0,-1.0)#POINT n°4
+        fct.setData(i*Tcycle+Tcycle*4.0/4.0,0.0)#POINT n°5    
+elif whichFunction == "reverse": # t = -t(t)
+    for i in range (0,Ncycle):
+        fct.setData(i*Tcycle+0.,0.) #POINT n°1
+        fct.setData(i*Tcycle+Tcycle/4.0,-1.0)#POINT n°2
+        fct.setData(i*Tcycle+Tcycle*2.0/4.0,0.0)#POINT n°3
+        fct.setData(i*Tcycle+Tcycle*3.0/4.0,1.0)#POINT n°4
+        fct.setData(i*Tcycle+Tcycle*4.0/4.0,0.0)#POINT n°5    
+elif whichFunction == "visco1": # kept at a non-zero value after one cycle
+        staticLoadFraction = 1 # = staticLoad / Trac
+        fct.setData(0.,0.) #POINT n°1
+        fct.setData(Tcycle/4.0,1.0)#POINT n°2
+        fct.setData(Tcycle*2.0/4.0,0.0)#POINT n°3
+        fct.setData(Tcycle*3.0/4.0,-1.0)#POINT n°4
+        fct.setData(Tcycle*4.0/4.0,0.0)#POINT n°5    
+        fct.setData(Tcycle*6.0/4.0,staticLoadFraction)#POINT n°6    
+        fct.setData(Tcycle*10.0,staticLoadFraction)#POINT n°7    
+elif whichFunction == "visco2":
+    # smoothen sawtooth: /¯\_   _
+    #                        \_/
+    for i in range (0,Ncycle):
+        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+0.,0.) #POINT n°1
+        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle/4.,1.) #POINT n°2
+        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(1./4.+RelaxFractionTime),1.) #POINT n°3
+        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(2./4.+RelaxFractionTime),0.) #POINT n°4
+        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(2./4.+2*RelaxFractionTime),0.) #POINT n°5
+        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(3./4.+2*RelaxFractionTime),-1.) #POINT n°6
+        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(3./4.+3*RelaxFractionTime),-1.) #POINT n°7
+        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(1+3*RelaxFractionTime),0.) #POINT n°8
+        fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle*(1+4*RelaxFractionTime),0.) #POINT n°9   
 
 #########################################
 # IMPLEMENT A DIFFERENT LOADING FCT HERE#
@@ -328,7 +361,11 @@ node_id = 7
 
 valuesmanager = metafor.getValuesManager()                                                  #Access Values Manager
 
-valuesmanager.add(1, MiscValueExtractor(metafor,EXT_T),'time')                              #Archive the time(EXT_T) in a "time.ascii" file
+valuesmanager.add(1, MiscValueExtractor(metafor,EXT_T),'time')    
+
+valuesmanager.add(15, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_XY' )
+valuesmanager.add(16, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_XZ' )
+valuesmanager.add(17, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_YZ' )                          #Archive the time(EXT_T) in a "time.ascii" file
 
 #Stress
 valuesmanager.add(2, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_XX' )
@@ -361,12 +398,23 @@ dataCurveSZ = VectorDataCurve(3, valuesmanager.getDataVector(1), valuesmanager.g
 dataCurveSVM = VectorDataCurve(4, valuesmanager.getDataVector(1), valuesmanager.getDataVector(5),'Sigma_VM')
 dataCurveSYield = VectorDataCurve(5, valuesmanager.getDataVector(1), valuesmanager.getDataVector(6),'Sigma_Yield')
 
+dataCurveSXY = VectorDataCurve(13, valuesmanager.getDataVector(1), valuesmanager.getDataVector(15),'Sigma_XY')
+dataCurveSXZ = VectorDataCurve(14, valuesmanager.getDataVector(1), valuesmanager.getDataVector(16),'Sigma_XZ')
+dataCurveSYZ = VectorDataCurve(15, valuesmanager.getDataVector(1), valuesmanager.getDataVector(17),'Sigma_YZ')
+
 dataCurveSet2 = DataCurveSet()
 dataCurveSet2.add(dataCurveSX)
 dataCurveSet2.add(dataCurveSY)
 dataCurveSet2.add(dataCurveSZ)
 dataCurveSet2.add(dataCurveSVM)
 dataCurveSet2.add(dataCurveSYield)
+
+
+# dataCurveSet2.add(dataCurveSXY)
+# dataCurveSet2.add(dataCurveSXZ)
+# dataCurveSet2.add(dataCurveSYZ)
+
+
 winc2 = VizWin()
 winc2.add(dataCurveSet2)
 metafor.addObserver(winc2)
@@ -399,5 +447,12 @@ dataCurveSet4.add(dataCurveAZ)
 winc4 = VizWin()
 winc4.add(dataCurveSet4)
 metafor.addObserver(winc4)
-metafor.addObserver(winc4)
+
+# Hydropressure
+dataCurveP = VectorDataCurve(13, valuesmanager.getDataVector(1), valuesmanager.getDataVector(14),'IF_P')
+dataCurveSet5 = DataCurveSet()
+dataCurveSet5.add(dataCurveP)
+winc5 = VizWin()
+winc5.add(dataCurveSet5)
+metafor.addObserver(winc5)
 
