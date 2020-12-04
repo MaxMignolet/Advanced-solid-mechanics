@@ -137,15 +137,15 @@ TransfiniteMesher3D(volumeset(1)).execute(True)
 # example: 1, 0, 1 -> linear isotropic viscoplastic hardening
 # /!\ pure kinematic hardening  doesn't work. A yield stress law for a constant
 # :!\ sigma_y have still to be implemented to resolve this issue
-IsoHardening = 0 # indicates the isotropic hardening law used
+IsoHardening = 1 # indicates the isotropic hardening law used
                  # if 1: linear
                  # if 2: non-linear (saturated/Voce)
                  # if 0: no isotropic hardening (simga_y = sigma_y^0)
-KinHardening = 2 # indicates the kinematic hardening law used
+KinHardening = 0 # indicates the kinematic hardening law used
                  # if 1: linear
                  # if 2: non-linear
                  # if 0: no kinematic hardening (backstress = 0)
-Visco = 0       # indicates the viscoplastic law used #still to be implemented
+Visco = 1       # indicates the viscoplastic law used #still to be implemented
                  # if 1: Perzyna law
                  # if 0: no viscosity effects
 Kin_base = 2 # don't modify this!
@@ -161,7 +161,7 @@ h = 30000.0                 # Hardening parameter
 theta_star = 0.2            # Mixed hardening parameter
 SigmaY_inf = 300            # Elastic limit at saturation
 eta_k = math.sqrt(2/3) * h/SigmaY_0 # Non-linear kinematic parameter
-viscoRelaxationTime = 3.    # [s] = eta / h_i
+viscoRelaxationTime = .8    # [s] = eta / h_i
 eta = h*viscoRelaxationTime # Viscoplastic parameter [MPa.s]
 
 if(IsoHardening != 0 and KinHardening != 0): # if mixed hardening
@@ -286,7 +286,7 @@ Tcycle = 4.                        #Duration of one cycle
 uMax = 0.5                       #Max prescribed displacement 
 
 fct = PieceWiseLinearFunction()
-whichFunction = "normal"
+whichFunction = "visco2"
 # whichFunction = "reverse"
 # whichFunction = "visco1"
 # whichFunction = "visco2"
@@ -311,11 +311,12 @@ elif whichFunction == "visco1": # kept at a non-zero value after one cycle
         fct.setData(Tcycle*2.0/4.0,0.0)#POINT n°3
         fct.setData(Tcycle*3.0/4.0,-1.0)#POINT n°4
         fct.setData(Tcycle*4.0/4.0,0.0)#POINT n°5    
-        fct.setData(Tcycle*6.0/4.0,staticLoadFraction)#POINT n°6    
+        fct.setData(Tcycle*5.0/4.0,staticLoadFraction)#POINT n°6    
         fct.setData(Tcycle*10.0,staticLoadFraction)#POINT n°7    
 elif whichFunction == "visco2":
     # smoothen sawtooth: /¯\_   _
     #                        \_/
+    RelaxFractionTime = 1/4
     for i in range (0,Ncycle):
         fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+0.,0.) #POINT n°1
         fct.setData(i*Tcycle*(1+4*RelaxFractionTime)+Tcycle/4.,1.) #POINT n°2
@@ -363,9 +364,9 @@ valuesmanager = metafor.getValuesManager()                                      
 
 valuesmanager.add(1, MiscValueExtractor(metafor,EXT_T),'time')    
 
-valuesmanager.add(15, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_XY' )
-valuesmanager.add(16, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_XZ' )
-valuesmanager.add(17, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_YZ' )                          #Archive the time(EXT_T) in a "time.ascii" file
+valuesmanager.add(15, IFNodalValueExtractor(pointset(node_id), IF_SIG_XY),'Sigma_XY' )
+valuesmanager.add(16, IFNodalValueExtractor(pointset(node_id), IF_SIG_XZ),'Sigma_XZ' )
+valuesmanager.add(17, IFNodalValueExtractor(pointset(node_id), IF_SIG_YZ),'Sigma_YZ' )                          #Archive the time(EXT_T) in a "time.ascii" file
 
 #Stress
 valuesmanager.add(2, IFNodalValueExtractor(pointset(node_id), IF_SIG_XX),'Sigma_XX' )
@@ -379,14 +380,20 @@ valuesmanager.add(7, IFNodalValueExtractor(pointset(node_id), IF_EPL),'EPL' )
 valuesmanager.add(8, IFNodalValueExtractor(pointset(node_id), IF_NAT_STRAIN_XX),'E_XX' )
 valuesmanager.add(9, IFNodalValueExtractor(pointset(node_id), IF_NAT_STRAIN_YY),'E_YY' )
 valuesmanager.add(10, IFNodalValueExtractor(pointset(node_id), IF_NAT_STRAIN_ZZ),'E_ZZ' )
-
+valuesmanager.add(21, IFNodalValueExtractor(pointset(node_id), IF_NAT_STRAIN_XY),'E_XY' )
+valuesmanager.add(22, IFNodalValueExtractor(pointset(node_id), IF_NAT_STRAIN_XZ),'E_XZ' )
+valuesmanager.add(23, IFNodalValueExtractor(pointset(node_id), IF_NAT_STRAIN_YZ),'E_YZ' )
+valuesmanager.add(24, IFNodalValueExtractor(pointset(node_id), IF_DEPL),'DEPL' )
 #Backstress
 valuesmanager.add(11, IFNodalValueExtractor(pointset(node_id), IF_ALP_XX),'A_XX' )
 valuesmanager.add(12, IFNodalValueExtractor(pointset(node_id), IF_ALP_YY),'A_YY' )
 valuesmanager.add(13, IFNodalValueExtractor(pointset(node_id), IF_ALP_ZZ),'A_ZZ' )
+valuesmanager.add(18, IFNodalValueExtractor(pointset(node_id), IF_ALP_XY),'A_XY' )
+valuesmanager.add(19, IFNodalValueExtractor(pointset(node_id), IF_ALP_XZ),'A_XZ' )
+valuesmanager.add(20, IFNodalValueExtractor(pointset(node_id), IF_ALP_YZ),'A_YZ' )
 
 #Hydrorpessure
-valuesmanager.add(14, IFNodalValueExtractor(pointset(node_id), IF_ALP_ZZ),'IF_P' )
+valuesmanager.add(14, IFNodalValueExtractor(pointset(node_id), IF_P),'IF_P' )
 
 #10. Visualisation of curves in real time (not necessary but useful)
 #=====================================================
@@ -424,12 +431,17 @@ dataCurveDEPL = VectorDataCurve(6, valuesmanager.getDataVector(1), valuesmanager
 dataCurveDX = VectorDataCurve(7, valuesmanager.getDataVector(1), valuesmanager.getDataVector(8),'E_XX')
 dataCurveDY = VectorDataCurve(8, valuesmanager.getDataVector(1), valuesmanager.getDataVector(9),'E_YY')
 dataCurveDZ = VectorDataCurve(9, valuesmanager.getDataVector(1), valuesmanager.getDataVector(10),'E_ZZ')
+dataCurveDXY = VectorDataCurve(19, valuesmanager.getDataVector(1), valuesmanager.getDataVector(21),'E_XY')
+dataCurveDXZ = VectorDataCurve(20, valuesmanager.getDataVector(1), valuesmanager.getDataVector(22),'E_XZ')
+dataCurveDYZ = VectorDataCurve(21, valuesmanager.getDataVector(1), valuesmanager.getDataVector(23),'E_YZ')
+dataCurveDDEPL = VectorDataCurve(22, valuesmanager.getDataVector(1), valuesmanager.getDataVector(24),'DE_PL')
 
 dataCurveSet3 = DataCurveSet()
 dataCurveSet3.add(dataCurveDX)
 dataCurveSet3.add(dataCurveDY)
 dataCurveSet3.add(dataCurveDZ)
 dataCurveSet3.add(dataCurveDEPL)
+dataCurveSet3.add(dataCurveDDEPL)
 winc3 = VizWin()
 winc3.add(dataCurveSet3)
 metafor.addObserver(winc3)
@@ -438,12 +450,18 @@ metafor.addObserver(winc3)
 dataCurveAX = VectorDataCurve(10, valuesmanager.getDataVector(1), valuesmanager.getDataVector(11),'A_XX')
 dataCurveAY = VectorDataCurve(11, valuesmanager.getDataVector(1), valuesmanager.getDataVector(12),'A_YY')
 dataCurveAZ = VectorDataCurve(12, valuesmanager.getDataVector(1), valuesmanager.getDataVector(13),'A_ZZ')
+dataCurveAXY = VectorDataCurve(16, valuesmanager.getDataVector(1), valuesmanager.getDataVector(18),'A_XY')
+dataCurveAXZ = VectorDataCurve(17, valuesmanager.getDataVector(1), valuesmanager.getDataVector(19),'A_XZ')
+dataCurveAYZ = VectorDataCurve(18, valuesmanager.getDataVector(1), valuesmanager.getDataVector(20),'A_YZ')
 
 
 dataCurveSet4 = DataCurveSet()
 dataCurveSet4.add(dataCurveAX)
 dataCurveSet4.add(dataCurveAY)
 dataCurveSet4.add(dataCurveAZ)
+# dataCurveSet4.add(dataCurveAXY)
+# dataCurveSet4.add(dataCurveAXZ)
+# dataCurveSet4.add(dataCurveAYZ)
 winc4 = VizWin()
 winc4.add(dataCurveSet4)
 metafor.addObserver(winc4)
