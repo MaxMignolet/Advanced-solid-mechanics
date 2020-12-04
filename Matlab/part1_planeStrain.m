@@ -18,9 +18,9 @@ figure;
 hold on
 plot(time(1:index_end), iso.sigma_xx(1:index_end), 'LineWidth', 2.5);
 plot(time(1:index_end), iso.sigma_yy(1:index_end), 'LineWidth', 2.5);
-plot(time(1:index_end), iso.sigma_yy(1:index_end), 'LineWidth', 2.5);
+plot(time(1:index_end), iso.sigma_zz(1:index_end), 'LineWidth', 2.5);
 plot(time(1:index_end), iso.sigma_vm(1:index_end), '--', 'LineWidth', 2.5);
-plot(time(1:index_end), iso.sigma_equi(1:index_end), '--', 'LineWidth', 2.5);
+% plot(time(1:index_end), iso.sigma_equi(1:index_end), '--', 'LineWidth', 2.5);
 plot(time(1:index_end), iso.sigma_yield(1:index_end), 'LineWidth', 2.5);
 hold off
 grid on
@@ -28,7 +28,7 @@ xlabel('Time [s]', 'FontSize',18)
 ylabel('Stress [MPa]', 'FontSize',18)
 set(gca,'fontsize',20)
 
-lgd = legend('$\sigma_{xx}$', '$\sigma_{yy}$', '$\sigma_{zz}$', '$\overline\sigma^{\mathrm{vm}}$', '$\overline\sigma$', '$\sigma_y$');
+lgd = legend('$\sigma_{xx}$', '$\sigma_{yy}$', '$\sigma_{zz}$', '$\overline\sigma^{\mathrm{vm}} = \overline\sigma$', '$\sigma_y$');
 set(lgd,'interpreter','Latex','FontSize',25, 'Location', 'southeast');
 set(gca,'fontsize',20)
 
@@ -52,7 +52,7 @@ xlabel('Time [s]', 'FontSize',18)
 ylabel('Strain [%]', 'FontSize', 18)
 set(gca,'fontsize',20)
 
-lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy}$', '$\varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{vp}}$');
+lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy}$', '$\varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{p}}$');
 set(lgd,'interpreter','Latex','FontSize',25, 'Location', 'southeast');
 set(gca,'fontsize',20)
 
@@ -101,7 +101,7 @@ xlabel('Time [s]', 'FontSize',18)
 ylabel('Strain [%]', 'FontSize', 18)
 set(gca,'fontsize',20)
 
-lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy}$', '$\varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{vp}}$');
+lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy}$', '$\varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{p}}$');
 set(lgd,'interpreter','Latex','FontSize',25, 'Location', 'best');
 set(gca,'fontsize',20)
 
@@ -174,7 +174,7 @@ xlabel('Time [s]', 'FontSize',18)
 ylabel('Strain [%]', 'FontSize', 18)
 set(gca,'fontsize',20)
 
-lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy}$', '$\varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{vp}}$');
+lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy}$', '$\varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{p}}$');
 set(lgd,'interpreter','Latex','FontSize',25, 'Location', 'best');
 set(gca,'fontsize',20)
 

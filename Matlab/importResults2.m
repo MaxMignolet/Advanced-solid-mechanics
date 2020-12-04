@@ -27,5 +27,5 @@ function ret = importResults2(resultFolder)
 	ret.a_yz = load(strcat(resultFolder,'/A_YZ.ascii')); 
 	
 	ret.p = load(strcat(resultFolder,'/IF_P.ascii')); 
-	ret.sigma_equi = sqrt(3/2 * ((ret.sigma_xx - ret.p).^2 + (ret.sigma_xx - ret.p).^2 + (ret.sigma_xx - ret.p).^2 + ret.sigma_xy.^2 + ret.sigma_xz.^2 + ret.sigma_yz.^2));
+	ret.sigma_equi = sqrt(3/2 * ((ret.sigma_xx - ret.p).^2 + (ret.sigma_yy - ret.p).^2 + (ret.sigma_zz - ret.p).^2 + 2*ret.sigma_xy.^2 + 2*ret.sigma_xz.^2 + 2*ret.sigma_yz.^2));
 end

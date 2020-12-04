@@ -49,7 +49,7 @@ xlabel('Time [s]', 'FontSize',18)
 ylabel('Strain [%]', 'FontSize', 18)
 set(gca,'fontsize',20)
 
-lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy} = \varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{vp}}$');
+lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy} = \varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{p}}$');
 set(lgd,'interpreter','Latex','FontSize',25, 'Location', 'best');
 set(gca,'fontsize',20)
 
@@ -57,6 +57,7 @@ set(gcf, 'PaperPositionMode','auto')
 print(gcf,'lin1_iso_strain','-depsc')
 
 %% kin stress
+time = kin.time;
 t_end = 12;
 index_end = find(time == t_end);
 
@@ -96,7 +97,7 @@ xlabel('Time [s]', 'FontSize',18)
 ylabel('Strain [%]', 'FontSize', 18)
 set(gca,'fontsize',20)
 
-lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy} = \varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{vp}}$');
+lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy} = \varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{p}}$');
 set(lgd,'interpreter','Latex','FontSize',25, 'Location', 'best');
 set(gca,'fontsize',20)
 
@@ -127,6 +128,7 @@ set(gcf, 'PaperPositionMode','auto')
 print(gcf,'lin1_kin_backstress','-depsc')
 
 %% mix stress
+time = kin.time;
 t_end = 12;
 index_end = find(time == t_end);
 
@@ -166,7 +168,7 @@ xlabel('Time [s]', 'FontSize',18)
 ylabel('Strain [%]', 'FontSize', 18)
 set(gca,'fontsize',20)
 
-lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy} = \varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{vp}}$');
+lgd = legend('$\varepsilon_{xx}$', '$\varepsilon_{yy} = \varepsilon_{zz}$', '$\overline\varepsilon^{\mathrm{p}}$');
 set(lgd,'interpreter','Latex','FontSize',25, 'Location', 'best');
 set(gca,'fontsize',20)
 
